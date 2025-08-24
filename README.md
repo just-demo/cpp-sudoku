@@ -1,3 +1,3 @@
 # sudoku-cpp
 
-Migrated from https://github.com/just-demo/python-sudoku by LLM
+Migrated from java https://github.com/just-demo/sudoku by LLM

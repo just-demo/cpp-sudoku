@@ -1,27 +1,21 @@
 CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O3
-INCLUDES = -Isolver
-SOURCES = solver/main.cpp solver/solver.cpp solver/cell.cpp solver/value.cpp solver/format.cpp solver/errors.cpp
-TEST_SOURCES = solver/test_speed.cpp solver/solver.cpp solver/cell.cpp solver/value.cpp solver/format.cpp solver/errors.cpp
-TARGET = sudoku_solver
-TEST_TARGET = test_speed
+INCLUDES = -Isrc
+SOURCES = src/simple_solver.cpp src/test_speed.cpp
+TARGET = sudoku-solver
 
-.PHONY: all clean test
+.PHONY: all clean
 
-all: $(TARGET) $(TEST_TARGET)
+all: $(TARGET)
 
 $(TARGET): $(SOURCES)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
-
-$(TEST_TARGET): $(TEST_SOURCES)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
-
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(SOURCES) -o $(TARGET)
 
 clean:
-	rm -f $(TARGET) $(TEST_TARGET)
+	rm -f $(TARGET)
 
-# Individual object files for faster rebuilds
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+debug: CXXFLAGS += -g -DDEBUG
+debug: $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
