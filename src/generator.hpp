@@ -14,6 +14,7 @@ namespace sudoku {
         int blockSize;
         std::unordered_set<int> values;
         std::mt19937 rng;
+        bool interrupted = false;
 
     public:
         Generator(int size);
@@ -21,6 +22,8 @@ namespace sudoku {
         Generator(int size, int complexityLowerLimit);
 
         std::vector<std::vector<std::optional<int> > > generate();
+
+        void interrupt();
 
     private:
         std::vector<std::vector<std::optional<int> > > generate(

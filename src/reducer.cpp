@@ -29,6 +29,10 @@ namespace sudoku {
     std::vector<std::vector<std::optional<int> > > Reducer::reduce(
         const std::vector<std::vector<std::optional<int> > > &initialValues,
         const std::vector<Cell> &closeCandidates) {
+        if (interrupted) {
+            throw InterruptedException();
+        }
+
         std::unordered_map<Cell, std::vector<std::vector<std::optional<int> > > > candidates;
 
         for (const Cell &cell: closeCandidates) {
@@ -78,5 +82,9 @@ namespace sudoku {
         }
 
         return bestResult;
+    }
+
+    void Reducer::interrupt() {
+        interrupted = true;
     }
 }

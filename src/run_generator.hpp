@@ -9,6 +9,7 @@ namespace sudoku {
 
     private:
         static constexpr std::chrono::seconds GENERATOR_TIMEOUT{3};
-        static constexpr std::chrono::minutes REDUCER_TIMEOUT{1};
+        // static constexpr std::chrono::minutes REDUCER_TIMEOUT{1};
+        static constexpr std::chrono::seconds REDUCER_TIMEOUT{1};
     };
 }

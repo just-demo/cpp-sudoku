@@ -26,6 +26,10 @@ namespace sudoku {
 
     std::vector<std::vector<std::optional<int> > > Generator::generate(
         const std::vector<std::vector<std::optional<int> > > &initialValues) {
+        if (interrupted) {
+            throw InterruptedException();
+        }
+
         if (Utils::countOpen(initialValues) > complexityLowerLimit) {
             throw ComplexityLimitException();
         }
@@ -86,5 +90,9 @@ namespace sudoku {
             }
             throw NoSolutionException();
         }
+    }
+
+    void Generator::interrupt() {
+        interrupted = true;
     }
 }

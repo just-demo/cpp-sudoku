@@ -11,8 +11,7 @@ int main(int argc, char *argv[]) {
     // stub args
     std::array stubArgs = {
         "dummy",
-        "solve",
-        ".......9......8.2.7.3.54.....52.................6....88....3..7.9....6..6...8...4"
+        "generate"
     };
     argc = stubArgs.size();
     argv = const_cast<char**>(stubArgs.data());

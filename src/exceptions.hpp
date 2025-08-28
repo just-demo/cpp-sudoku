@@ -15,9 +15,9 @@ namespace sudoku {
         }
     };
 
-    class TimeLimitException : public std::runtime_error {
+    class InterruptedException : public std::runtime_error {
     public:
-        TimeLimitException() : std::runtime_error("Time limit exceeded") {
+        InterruptedException() : std::runtime_error("Operation was interrupted") {
         }
     };
 

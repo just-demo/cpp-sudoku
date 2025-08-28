@@ -17,17 +17,21 @@ namespace sudoku {
         std::filesystem::path reducerFailedDir = DataDirs::REDUCER_FAILED_DIR / Utils::getCurrentTime();
         std::map<long, long> counts;
 
-        Generator generator(9, 31);
-        Reducer reducer;
+        // Generator generator(9, 31);
+        // Reducer reducer;
 
+        // TODO: not need to use atomic
         std::atomic<long> totalCounter{0};
         std::atomic<long> successCounter{0};
         std::atomic<long> openMin{LONG_MAX};
 
-        for (int i = 0; i < 10; ++i) {
-            std::cout << "Generating " << ++totalCounter << std::endl;
+        const long count = 10;
 
-            auto generateFuture = std::async(std::launch::async, [&generator]() {
+        while (successCounter.load() < count) {
+            std::cout << "Generating " << ++totalCounter << std::endl;
+            Generator generator(9, 31);
+
+            auto generateFuture = std::async(std::launch::async, [&generator] {
                 return generator.generate();
             });
 
@@ -35,50 +39,48 @@ namespace sudoku {
                 auto result = generateFuture.wait_for(GENERATOR_TIMEOUT);
                 if (result == std::future_status::timeout) {
                     std::cout << "Failed to generate (timeout)" << std::endl;
+                    generator.interrupt();
                     continue;
                 }
 
                 auto sudoku = generateFuture.get();
                 long openCount = Utils::countOpen(sudoku);
 
-                // Only try to reduce if the puzzle has a reasonable number of clues (not 81)
-                if (openCount < 81) {
-                    std::cout << "Minimizing " << totalCounter.load() << std::endl;
-                    auto minimizeFuture = std::async(std::launch::async, [&reducer, sudoku]() {
-                        return reducer.reduce(sudoku);
-                    });
+                std::cout << "Minimizing " << totalCounter.load() << std::endl;
+                Reducer reducer;
+                auto minimizeFuture = std::async(std::launch::async, [&reducer, sudoku]() {
+                    return reducer.reduce(sudoku);
+                });
 
-                    try {
-                        result = minimizeFuture.wait_for(REDUCER_TIMEOUT);
-                        if (result == std::future_status::timeout) {
-                            std::cout << "Failed to reduce: " << openCount << std::endl;
-                            std::filesystem::path failedFile = reducerFailedDir /
-                                                               (std::to_string(openCount) + "-" +
-                                                                Utils::getCurrentTime() + "-" + std::to_string(
-                                                                    totalCounter.load()) + ".txt");
-                            Utils::writeFile(failedFile, Utils::toString2D(sudoku));
-                            counts[300]++;
-                            continue;
-                        }
-
-                        auto minimizedSudoku = minimizeFuture.get();
-                        long newOpenCount = Utils::countOpen(minimizedSudoku);
-                        if (newOpenCount != openCount) {
-                            std::cout << "Minimized: " << openCount << " => " << newOpenCount << std::endl;
-                            openCount = newOpenCount;
-                            sudoku = minimizedSudoku;
-                        }
-                    } catch (const std::exception &e) {
+                try {
+                    result = minimizeFuture.wait_for(REDUCER_TIMEOUT);
+                    if (result == std::future_status::timeout) {
                         std::cout << "Failed to reduce: " << openCount << std::endl;
-                        std::filesystem::path failedFile = reducerFailedDir /
-                                                           (std::to_string(openCount) + "-" + Utils::getCurrentTime() +
-                                                            "-" + std::to_string(totalCounter.load()) + ".txt");
+                        std::filesystem::path failedFile =
+                                reducerFailedDir / (
+                                    std::to_string(openCount) + "-" + Utils::getCurrentTime() + "-" + std::to_string(
+                                        totalCounter.load()) + ".txt");
                         Utils::writeFile(failedFile, Utils::toString2D(sudoku));
                         counts[300]++;
+                        reducer.interrupt();
                         continue;
                     }
-                } else {
-                    std::cout << "Generated complete puzzle (81 clues), skipping reduction" << std::endl;
+
+                    auto minimizedSudoku = minimizeFuture.get();
+                    long newOpenCount = Utils::countOpen(minimizedSudoku);
+                    if (newOpenCount != openCount) {
+                        std::cout << "Minimized: " << openCount << " => " << newOpenCount << std::endl;
+                        openCount = newOpenCount;
+                        sudoku = minimizedSudoku;
+                    }
+                } catch (const std::exception &e) {
+                    std::cout << "Failed to reduce: " << openCount << std::endl;
+                    std::filesystem::path failedFile = reducerFailedDir /
+                                                       (std::to_string(openCount) + "-" + Utils::getCurrentTime() +
+                                                        "-" + std::to_string(totalCounter.load()) + ".txt");
+                    Utils::writeFile(failedFile, Utils::toString2D(sudoku));
+                    counts[300]++;
+                    continue;
                 }
 
                 long newMin = openCount;

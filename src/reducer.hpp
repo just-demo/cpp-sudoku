@@ -11,12 +11,15 @@ namespace sudoku {
 
     class Reducer {
         std::mt19937 rng;
+        bool interrupted = false;
 
     public:
         Reducer();
 
         std::vector<std::vector<std::optional<int> > > reduce(
             const std::vector<std::vector<std::optional<int> > > &initialValues);
+
+        void interrupt();
 
     private:
         std::vector<std::vector<std::optional<int> > > reduce(

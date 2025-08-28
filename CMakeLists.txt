@@ -15,6 +15,7 @@ add_executable(sudoku
         src/data_dirs.cpp
         src/run_generator.cpp
         src/run_reducer.cpp
+        test_async.cpp
 )
 
 # Test executables
