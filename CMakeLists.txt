@@ -1,39 +1,41 @@
-cmake_minimum_required(VERSION 3.16)
-project(sudoku)
+cmake_minimum_required(VERSION 3.20)
+project(sudoku-cpp)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Main executable
-add_executable(sudoku
-        src/main.cpp
-        src/clever_solver.cpp
-        src/cell.cpp
-        src/utils.cpp
-        src/generator.cpp
-        src/reducer.cpp
-        src/data_dirs.cpp
-        src/run_generator.cpp
-        src/run_reducer.cpp
-        test_async.cpp
+# Include directories
+include_directories(src)
+
+# Source files
+set(SOURCES
+        src/util/SudokuUtils.cpp
+        src/util/FileUtils.cpp
+        src/solver/Solver.cpp
+        src/generator/Reducer.cpp
+        src/generator/Generator.cpp
+        src/main/DataDirs.cpp
 )
 
-# Test executables
-add_executable(test_clever_solver
-        src/test/test_clever_solver.cpp
-        src/clever_solver.cpp
-        src/utils.cpp
-)
+# Create library
+add_library(sudoku-lib STATIC ${SOURCES})
 
-add_executable(test_reducer
-        src/test/test_reducer.cpp
-        src/reducer.cpp
-        src/clever_solver.cpp
-        src/cell.cpp
-        src/utils.cpp
-)
+# Create test executables
+add_executable(solver-test test/solver/SolverTest.cpp)
+target_link_libraries(solver-test sudoku-lib)
 
-# Set compiler flags
-target_compile_options(sudoku PRIVATE -Wall -Wextra -O2)
-target_compile_options(test_clever_solver PRIVATE -Wall -Wextra -O2)
-target_compile_options(test_reducer PRIVATE -Wall -Wextra -O2)
+add_executable(reducer-test test/generator/ReducerTest.cpp)
+target_link_libraries(reducer-test sudoku-lib)
+
+# Create main executables
+add_executable(run-generator src/main/RunGenerator.cpp)
+target_link_libraries(run-generator sudoku-lib)
+
+add_executable(run-solver src/main/RunSolver.cpp)
+target_link_libraries(run-solver sudoku-lib)
+
+# Enable testing
+enable_testing()
+add_test(NAME solver-test COMMAND solver-test)
+add_test(NAME reducer-test COMMAND reducer-test)
+add_test(NAME generator-test COMMAND generator-test)

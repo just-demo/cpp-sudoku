@@ -1,130 +1,107 @@
-# Sudoku Solver, Generator, and Reducer (C++20)
+# C++20 Sudoku Solver and Generator
 
-This is a C++20 migration of the Java Sudoku project, providing a complete Sudoku solving, generation, and reduction system.
+This is a C++20 migration of the Java Sudoku solver and generator project. The project includes a complete Sudoku solver, puzzle generator, and puzzle reducer.
 
 ## Features
 
-- **CleverSolver**: Advanced Sudoku solving algorithm with constraint propagation
-- **Generator**: Creates new Sudoku puzzles with specified complexity
-- **Reducer**: Minimizes Sudoku puzzles by removing redundant clues
-- **File I/O**: Handles puzzle storage and retrieval
-- **Multi-threading**: Supports concurrent puzzle generation and reduction
+- **Solver**: Solves Sudoku puzzles using constraint propagation and backtracking
+- **Generator**: Generates valid Sudoku puzzles
+- **Reducer**: Reduces the number of clues in a Sudoku puzzle while maintaining uniqueness
+- **Tests**: Comprehensive test suite for solver and reducer functionality
 
 ## Building
 
-### Using Make
-```bash
-make clean
-make
-```
+### Prerequisites
 
-### Using CMake
+- CMake 3.20 or higher
+- C++20 compatible compiler (GCC 10+, Clang 10+, MSVC 2019+)
+
+### Build Instructions
+
 ```bash
-mkdir build && cd build
+mkdir build
+cd build
 cmake ..
 make
 ```
 
-## Usage
+## Running Tests
 
-### Main Application
 ```bash
-# Solve a puzzle
-./sudoku solve ".......9......8.2.7.3.54.....52.................6....88....3..7.9....6..6...8...4"
+# Run solver tests
+./solver-test
 
-# Generate puzzles
-./sudoku generate
-
-# Reduce failed puzzles
-./sudoku reduce
-
-# Copy reduced puzzles to ready directory
-./sudoku copy-reduced
+# Run reducer tests
+./reducer-test
 ```
 
-### Running Tests
-```bash
-# Run all tests
-make test
+## Running Applications
 
-# Run specific tests
-./test_clever_solver
-./test_reducer
+```bash
+# Run the solver on a complex puzzle
+./run-solver
+
+# Run the generator (generates and reduces puzzles)
+./run-generator
 ```
 
 ## Project Structure
 
-### Core Classes
-- `CleverSolver`: Main solving algorithm with constraint propagation
-- `Generator`: Creates new Sudoku puzzles
-- `Reducer`: Minimizes puzzles by removing redundant clues
-- `Cell`: Represents a cell in the Sudoku grid
-- `Utils`: Utility functions for I/O and matrix operations
+```
+cpp-sudoku/
+├── src/
+│   ├── exception/          # Exception classes
+│   ├── generator/          # Puzzle generator and reducer
+│   ├── main/              # Main application entry points
+│   ├── solver/            # Sudoku solver implementation
+│   ├── util/              # Utility functions
+│   └── test/              # Simple test framework
+├── test/
+│   ├── solver/            # Solver tests
+│   └── generator/         # Reducer tests
+├── CMakeLists.txt         # Build configuration
+└── README.md             # This file
+```
 
-### Main Applications
-- `RunGenerator`: Orchestrates puzzle generation with timeouts
-- `RunReducer`: Processes failed puzzles for reduction
+## Key Components
 
-### Data Management
-- `DataDirs`: Manages directory structure for puzzle storage
-- File utilities for reading/writing puzzles
-
-## Algorithm Details
-
-### CleverSolver
-The solver uses constraint propagation and backtracking:
-1. Initializes cells with all possible values
-2. Propagates constraints when cells are filled
-3. Uses guessing when no direct progress is possible
-4. Handles multiple solutions and no-solution cases
+### Solver
+The solver uses a constraint propagation algorithm with backtracking:
+- **Cell**: Represents a Sudoku cell with row, column, and block information
+- **Value**: Represents a Sudoku value (1-9) with candidate cells
+- **Constraint Propagation**: Eliminates impossible candidates based on Sudoku rules
+- **Backtracking**: Uses guessing when constraint propagation is insufficient
 
 ### Generator
-Creates puzzles by:
-1. Starting with an empty grid
-2. Using the solver to find a complete solution
-3. When multiple solutions exist, strategically adding clues
-4. Respecting complexity limits
+The generator creates valid Sudoku puzzles:
+- Starts with an empty grid
+- Uses backtracking to fill cells while maintaining Sudoku rules
+- Respects complexity limits to avoid overly complex puzzles
 
 ### Reducer
-Minimizes puzzles by:
-1. Identifying cells that can be removed
-2. Testing if removal creates multiple solutions
-3. Recursively finding the minimal puzzle
-4. Preserving unique solution property
+The reducer minimizes clues while maintaining puzzle uniqueness:
+- Removes clues one by one
+- Verifies that the puzzle still has a unique solution
+- Uses the solver to validate solutions
 
-## File Format
+## Migration Notes
 
-Puzzles are stored in two formats:
-- **1D**: Single line string (e.g., ".......9......8.2.7.3.54.....52...")
-- **2D**: Multi-line format with spaces (e.g., ". . . 8 7 . . . .")
+This C++20 implementation maintains the same algorithmic approach as the original Java code while leveraging modern C++ features:
 
-## Directory Structure
-```
-data/
-├── ready/           # Completed puzzles
-├── reducer-failed/  # Puzzles that failed reduction
-└── reducer-fixed/   # Successfully reduced puzzles
-```
-
-## Dependencies
-
-- C++20 compatible compiler (GCC 10+, Clang 10+, MSVC 2019+)
-- Standard library with filesystem support
+- **Smart Pointers**: Uses `std::shared_ptr` for memory management
+- **STL Containers**: Uses `std::vector`, `std::list`, `std::unordered_map`, etc.
+- **Modern C++**: Uses structured bindings, range-based for loops, and other C++20 features
+- **Exception Handling**: Maintains the same exception hierarchy as the Java version
+- **Namespaces**: Uses `just::demo` namespace structure similar to Java packages
 
 ## Performance
 
-The C++ implementation provides significant performance improvements over the Java version:
-- Faster constraint propagation
-- More efficient memory usage
-- Better cache locality
-- Reduced garbage collection overhead
+The C++ implementation should provide better performance than the Java version due to:
+- Reduced memory allocation overhead
+- More efficient data structures
+- Compiler optimizations
+- Lower runtime overhead
 
-## Testing
+## License
 
-The test suite verifies:
-- Solver correctness on various difficulty levels
-- Reducer functionality for puzzle minimization
-- File I/O operations
-- Error handling
-
-All tests from the original Java implementation have been migrated and pass successfully.
+This project is a migration of the original Java Sudoku project to C++20.
