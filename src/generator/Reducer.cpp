@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <random>
 
+#include "exception/MultipleSolutionsException.hpp"
+#include "solver/Solver.hpp"
+
 namespace just::demo::generator {
     std::vector<std::vector<int> > Reducer::reduce(const std::vector<std::vector<int> > &initialValues) {
         int size = static_cast<int>(initialValues.size());
@@ -52,10 +55,7 @@ namespace just::demo::generator {
         for (const auto &cell: nextCloseCandidates) {
             // Create a copy of nextCloseCandidates and remove the current cell
             auto remainingCandidates = nextCloseCandidates;
-            remainingCandidates.erase(
-                std::remove(remainingCandidates.begin(), remainingCandidates.end(), cell),
-                remainingCandidates.end()
-            );
+            std::erase(remainingCandidates, cell);
 
             auto result = reduce(candidates[cell], remainingCandidates);
             long openCount = just::demo::util::SudokuUtils::countOpen(result);

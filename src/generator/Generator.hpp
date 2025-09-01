@@ -2,11 +2,6 @@
 
 #include <vector>
 #include <unordered_set>
-#include <memory>
-#include "../solver/Solver.hpp"
-#include "../exception/ComplexityLimitException.hpp"
-#include "../exception/MultipleSolutionsException.hpp"
-#include "../exception/NoSolutionException.hpp"
 
 namespace just::demo::generator {
     class Generator {
@@ -37,4 +32,4 @@ namespace just::demo::generator {
         int blockSize_;
         std::unordered_set<int> values_;
     };
-} // namespace just::demo::generator
+}

@@ -1,13 +1,7 @@
 #pragma once
-
 #include <vector>
-#include <list>
-#include <unordered_map>
-#include <unordered_set>
 #include <memory>
-#include "../exception/MultipleSolutionsException.hpp"
-#include "../exception/NoSolutionException.hpp"
-#include "../exception/TimeLimitException.hpp"
+#include <stdexcept>
 
 namespace just::demo::solver {
     class Solver {
@@ -17,85 +11,88 @@ namespace just::demo::solver {
         std::vector<std::vector<int> > solve();
 
     private:
-        class Cell;
         class Value;
+        class Cell;
 
-        struct CannotOpenWithoutGuessingException : public std::runtime_error {
-            std::shared_ptr<Cell> cell;
-            std::shared_ptr<Value> value;
+        class CannotOpenWithoutGuessingException : public std::runtime_error {
+        public:
+            Cell *cell;
+            Value *value;
 
-            CannotOpenWithoutGuessingException(std::shared_ptr<Cell> c, std::shared_ptr<Value> v)
-                : std::runtime_error("Cannot open without guessing"), cell(std::move(c)), value(std::move(v)) {
+            CannotOpenWithoutGuessingException(Cell *c, Value *v)
+                : std::runtime_error("Cannot open without guessing"), cell(c), value(v) {
             }
         };
 
         class Cell {
+            Solver *solver;
+            Value *value{nullptr};
+            std::vector<Value *> candidates;
+
         public:
-            Cell(int row, int col, int block);
+            int row, col, block;
 
-            int getRow() const { return row_; }
-            int getCol() const { return col_; }
-            int getBlock() const { return block_; }
-            int getValue() const { return value_ ? value_->getValue() : 0; }
+            Cell(Solver *s, int r, int c, int b) : solver(s), row(r), col(c), block(b) {
+            }
 
-            void addCandidates(const std::vector<std::shared_ptr<Value> > &candidates);
+            void setCandidates(const std::vector<Value *> &values);
 
-            void open(std::shared_ptr<Value> value);
+            void open(Value *value);
 
-            bool isRelated(const std::shared_ptr<Cell> &cell) const;
+            bool isRelated(const Cell &other) const;
 
-            void removeCandidate(std::shared_ptr<Value> value);
+            void removeCandidate(Value *value);
 
-            int countCandidates() const { return candidates_.size(); }
+            int countCandidates() const {
+                return (int) candidates.size();
+            }
 
-            std::shared_ptr<Value> getCandidate() const;
+            Value *getCandidate() const {
+                return candidates.front();
+            }
 
-            std::vector<std::shared_ptr<Value> > getCandidates() const;
+            std::vector<Value*>& getCandidates() {
+                return candidates;
+            }
 
-        private:
-            int row_;
-            int col_;
-            int block_;
-            std::shared_ptr<Value> value_;
-            std::vector<std::shared_ptr<Value> > candidates_;
+            int getValue() const {
+                return value ? value->val : 0;
+            }
         };
 
         class Value {
+            Solver *solver;
+            std::vector<Cell *> cells;
+            std::vector<std::vector<Cell *> > candidates;
+
         public:
-            explicit Value(int value);
+            int val;
+            explicit Value(Solver *s, int v) : solver(s), val(v) {
+            }
 
-            int getValue() const { return value_; }
+            void setCandidates(const std::vector<Cell *> &cells);
 
-            void addCandidates(const std::vector<std::shared_ptr<Cell> > &candidates);
+            void removeCandidate(Cell *c);
 
-            void removeCandidate(std::shared_ptr<Cell> cell);
-
-            void open(std::shared_ptr<Cell> cell);
+            void open(Cell *c);
 
             int countCandidates() const;
 
-            std::shared_ptr<Cell> getCandidate() const;
+            Cell *getCandidate() const;
 
-            std::vector<std::shared_ptr<Cell> > getCandidates() const;
-
-            bool isComplete(int size) const;
-
-        private:
-            int value_;
-            std::vector<std::shared_ptr<Cell> > cells_;
-            std::vector<std::vector<std::shared_ptr<Cell> > > candidates_;
+            std::vector<Cell *> getCandidates() const;
         };
+
+        int size;
+        std::vector<std::unique_ptr<Cell> > allCells;
+        std::vector<Cell *> pendingCells;
+        std::vector<std::unique_ptr<Value> > allValues;
+        std::vector<Value *> pendingValues;
 
         void openNext();
 
-        std::vector<std::vector<int> > solveWithGuess(std::shared_ptr<Cell> cell, std::shared_ptr<Value> value);
+        std::vector<std::vector<int> > solveWithGuess(Cell *cell, Value *value);
 
         std::vector<std::vector<int> > copyState() const;
-
-        int size_;
-        int blockSize_;
-        std::vector<std::shared_ptr<Cell> > allCells_;
-        std::list<std::shared_ptr<Cell> > pendingCells_;
-        std::list<std::shared_ptr<Value> > pendingValues_;
     };
-} // namespace just::demo::solver
+}

@@ -64,7 +64,7 @@ void testReduceMinusTwo() {
     Reducer reducer;
     auto output = reducer.reduce(input);
 
-    TestFramework::assertEqual(SudokuUtils::countOpen(input) - 2, SudokuUtils::countOpen(output), "testReduceMinusTwo");
+    just::demo::test::TestFramework::assertEquals(SudokuUtils::countOpen(input) - 2, SudokuUtils::countOpen(output), "testReduceMinusTwo");
 }
 
 int main() {

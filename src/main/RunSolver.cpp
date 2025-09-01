@@ -88,6 +88,6 @@ void solveAllReadySudoku() {
 
 int main() {
     solveSingleComplexSudoku();
-    // solveAllReadySudoku(); // Uncomment to run all puzzles
+    // solveAllReadySudoku();
     return 0;
 }

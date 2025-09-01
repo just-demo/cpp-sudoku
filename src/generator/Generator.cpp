@@ -4,6 +4,11 @@
 #include <random>
 #include <cmath>
 
+#include "exception/ComplexityLimitException.hpp"
+#include "exception/MultipleSolutionsException.hpp"
+#include "exception/NoSolutionException.hpp"
+#include "solver/Solver.hpp"
+
 namespace just::demo::generator {
     Generator::Generator(int size, int complexityLowerLimit)
         : size_(size), complexityLowerLimit_(complexityLowerLimit), blockSize_(static_cast<int>(std::sqrt(size))) {
@@ -54,10 +59,7 @@ namespace just::demo::generator {
                 // Remove values from related cells
                 for (const auto &openCell: open) {
                     if (cell.isRelated(openCell)) {
-                        availableValues.erase(
-                            std::remove(availableValues.begin(), availableValues.end(), openCell.value),
-                            availableValues.end()
-                        );
+                        std::erase(availableValues, openCell.value);
                     }
                 }
 
@@ -76,4 +78,4 @@ namespace just::demo::generator {
             throw just::demo::exception::NoSolutionException();
         }
     }
-} // namespace just::demo::generator
+}

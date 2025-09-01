@@ -2,8 +2,6 @@
 
 #include <vector>
 #include <unordered_map>
-#include "../solver/Solver.hpp"
-#include "../exception/MultipleSolutionsException.hpp"
 
 namespace just::demo::generator {
     struct Cell {
@@ -26,7 +24,7 @@ namespace just::demo::generator {
         std::vector<std::vector<int> > reduce(const std::vector<std::vector<int> > &initialValues,
                                               const std::vector<Cell> &closeCandidates);
     };
-} // namespace just::demo::generator
+}
 
 // Hash function for Cell
 namespace std {

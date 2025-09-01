@@ -1,199 +1,61 @@
 #include "Solver.hpp"
-#include <algorithm>
-#include <cmath>
-#include <stdexcept>
+
+#include <map>
+
+#include "exception/MultipleSolutionsException.hpp"
+#include "exception/NoSolutionException.hpp"
+
+using namespace just::demo::exception;
 
 namespace just::demo::solver {
-    // Cell implementation
-    Solver::Cell::Cell(int row, int col, int block)
-        : row_(row), col_(col), block_(block), value_(nullptr) {
-    }
-
-    void Solver::Cell::addCandidates(const std::vector<std::shared_ptr<Value> > &candidates) {
-        candidates_ = candidates;
-    }
-
-    void Solver::Cell::open(std::shared_ptr<Value> value) {
-        value_ = value;
-        for (auto &candidate: candidates_) {
-            if (candidate) {
-                candidate->removeCandidate(std::make_shared<Cell>(*this));
-            }
-        }
-        candidates_.clear();
-        value->open(std::make_shared<Cell>(*this));
-    }
-
-    bool Solver::Cell::isRelated(const std::shared_ptr<Cell> &cell) const {
-        return row_ == cell->row_ || col_ == cell->col_ || block_ == cell->block_;
-    }
-
-    void Solver::Cell::removeCandidate(std::shared_ptr<Value> value) {
-        value->removeCandidate(std::make_shared<Cell>(*this));
-        candidates_.erase(
-            std::remove(candidates_.begin(), candidates_.end(), value),
-            candidates_.end()
-        );
-    }
-
-    std::shared_ptr<Solver::Value> Solver::Cell::getCandidate() const {
-        return candidates_.empty() ? nullptr : candidates_.front();
-    }
-
-    std::vector<std::shared_ptr<Solver::Value> > Solver::Cell::getCandidates() const {
-        return candidates_;
-    }
-
-    // Value implementation
-    Solver::Value::Value(int value) : value_(value) {
-    }
-
-    void Solver::Value::addCandidates(const std::vector<std::shared_ptr<Cell> > &candidates) {
-        // Group by row
-        std::unordered_map<int, std::vector<std::shared_ptr<Cell> > > rowGroups;
-        for (const auto &cell: candidates) {
-            rowGroups[cell->getRow()].push_back(cell);
-        }
-        for (const auto &[_, group]: rowGroups) {
-            candidates_.push_back(group);
-        }
-
-        // Group by column
-        std::unordered_map<int, std::vector<std::shared_ptr<Cell> > > colGroups;
-        for (const auto &cell: candidates) {
-            colGroups[cell->getCol()].push_back(cell);
-        }
-        for (const auto &[_, group]: colGroups) {
-            candidates_.push_back(group);
-        }
-
-        // Group by block
-        std::unordered_map<int, std::vector<std::shared_ptr<Cell> > > blockGroups;
-        for (const auto &cell: candidates) {
-            blockGroups[cell->getBlock()].push_back(cell);
-        }
-        for (const auto &[_, group]: blockGroups) {
-            candidates_.push_back(group);
-        }
-    }
-
-    void Solver::Value::removeCandidate(std::shared_ptr<Cell> cell) {
-        for (auto &group: candidates_) {
-            group.erase(
-                std::remove(group.begin(), group.end(), cell),
-                group.end()
-            );
-        }
-        candidates_.erase(
-            std::remove_if(candidates_.begin(), candidates_.end(),
-                           [](const std::vector<std::shared_ptr<Cell> > &group) { return group.empty(); }),
-            candidates_.end()
-        );
-    }
-
-
-    void Solver::Value::open(std::shared_ptr<Cell> cell) {
-        removeCandidate(cell);
-        cells_.push_back(cell);
-    }
-
-    int Solver::Value::countCandidates() const {
-        if (candidates_.empty()) return 0;
-        return std::min_element(candidates_.begin(), candidates_.end(),
-                                [](const auto &a, const auto &b) { return a.size() < b.size(); })->size();
-    }
-
-    std::shared_ptr<Solver::Cell> Solver::Value::getCandidate() const {
-        auto minGroup = std::min_element(candidates_.begin(), candidates_.end(),
-                                         [](const auto &a, const auto &b) { return a.size() < b.size(); });
-        return minGroup->empty() ? nullptr : minGroup->front();
-    }
-
-    std::vector<std::shared_ptr<Solver::Cell> > Solver::Value::getCandidates() const {
-        auto minGroup = std::min_element(candidates_.begin(), candidates_.end(),
-                                         [](const auto &a, const auto &b) { return a.size() < b.size(); });
-        return minGroup != candidates_.end() ? *minGroup : std::vector<std::shared_ptr<Cell> >{};
-    }
-
-    bool Solver::Value::isComplete(int size) const {
-        return cells_.size() == size;
-    }
-
-    // Solver implementation
     Solver::Solver(const std::vector<std::vector<int> > &initialValues) {
-        size_ = static_cast<int>(initialValues.size());
-        blockSize_ = static_cast<int>(std::sqrt(size_));
+        size = (int) initialValues.size();
+        int blockSize = (int) std::sqrt(size);
 
-        // Create value map
-        std::unordered_map<int, std::shared_ptr<Value> > valueMap;
-        for (int i = 1; i <= size_; ++i) {
-            valueMap[i] = std::make_shared<Value>(i);
+        for (int i = 1; i <= size; ++i) {
+            allValues.push_back(std::make_unique<Value>(this, i));
         }
 
-        // Create cells and initialize
-        std::unordered_map<std::shared_ptr<Cell>, std::shared_ptr<Value> > openCells;
-        for (int row = 0; row < size_; ++row) {
-            for (int col = 0; col < size_; ++col) {
-                int block = blockSize_ * (row / blockSize_) + col / blockSize_;
-                auto cell = std::make_shared<Cell>(row, col, block);
-                allCells_.push_back(cell);
+        std::map<Cell *, Value *> openCells;
 
+        for (int row = 0; row < size; ++row) {
+            for (int col = 0; col < size; ++col) {
+                int block = blockSize * (row / blockSize) + col / blockSize;
+                allCells.push_back(std::make_unique<Cell>(this, row, col, block));
                 int value = initialValues[row][col];
                 if (value != 0) {
-                    openCells[cell] = valueMap[value];
+                    openCells[allCells.back().get()] = allValues[value - 1].get();
                 }
             }
         }
 
-        // Add all cells and values to pending lists
-        for (const auto &cell: allCells_) {
-            pendingCells_.push_back(cell);
-        }
-        for (const auto &[_, value]: valueMap) {
-            pendingValues_.push_back(value);
+        for (auto &c: allCells) {
+            pendingCells.push_back(c.get());
         }
 
-        // Initialize candidates
-        std::vector<std::shared_ptr<Value> > allValues;
-        for (const auto &[_, value]: valueMap) {
-            allValues.push_back(value);
-        }
-        for (const auto &cell: allCells_) {
-            cell->addCandidates(allValues);
+        for (auto &v: allValues) {
+            pendingValues.push_back(v.get());
         }
 
-        std::vector<std::shared_ptr<Cell> > allCells;
-        for (const auto &cell: allCells_) {
-            allCells.push_back(cell);
-        }
-        for (const auto &value: allValues) {
-            value->addCandidates(allCells);
+        for (auto &c: pendingCells) {
+            c->setCandidates(pendingValues);
         }
 
-        // Open initial cells
-        for (const auto &[cell, value]: openCells) {
-            cell->open(value);
-            pendingCells_.remove(cell);
+        for (auto &v: pendingValues) {
+            v->setCandidates(pendingCells);
+        }
 
-            // Remove related cells' candidates
-            for (auto &pendingCell: pendingCells_) {
-                if (cell->isRelated(pendingCell)) {
-                    pendingCell->removeCandidate(value);
-                }
-            }
-
-            // Remove value from pending values if complete
-            if (value->isComplete(size_)) {
-                pendingValues_.remove(value);
-            }
+        for (auto &[c, v]: openCells) {
+            c->open(v);
         }
     }
 
     std::vector<std::vector<int> > Solver::solve() {
-        while (!pendingCells_.empty()) {
+        // TODO: implement interrupting
+        while (!pendingCells.empty()) {
             try {
                 openNext();
-            } catch (const CannotOpenWithoutGuessingException &e) {
+            } catch (CannotOpenWithoutGuessingException &e) {
                 return solveWithGuess(e.cell, e.value);
             }
         }
@@ -201,73 +63,38 @@ namespace just::demo::solver {
     }
 
     void Solver::openNext() {
-        if (pendingValues_.empty()) {
-            throw just::demo::exception::NoSolutionException();
+        if (pendingValues.empty()) {
+            throw NoSolutionException();
         }
 
-        // Find cell with minimum candidates
-        auto minCell = std::min_element(pendingCells_.begin(), pendingCells_.end(),
-                                        [](const auto &a, const auto &b) {
-                                            return a->countCandidates() < b->countCandidates();
-                                        });
-
-        if ((*minCell)->countCandidates() == 1) {
-            auto cell = *minCell;
-            auto value = cell->getCandidate();
-            cell->open(value);
-            pendingCells_.remove(cell);
-
-            // Remove related cells' candidates
-            for (auto &pendingCell: pendingCells_) {
-                if (cell->isRelated(pendingCell)) {
-                    pendingCell->removeCandidate(value);
-                }
-            }
-
-            // Remove value from pending values if complete
-            if (value->isComplete(size_)) {
-                pendingValues_.remove(value);
-            }
+        auto cellIt = std::ranges::min_element(pendingCells, [](Cell *a, Cell *b) {
+            return a->countCandidates() < b->countCandidates();
+        });
+        Cell *cell = *cellIt;
+        if (cell->countCandidates() == 1) {
+            cell->open(cell->getCandidate());
             return;
         }
 
-        // Find value with minimum candidates
-        auto minValue = std::min_element(pendingValues_.begin(), pendingValues_.end(),
-                                         [](const auto &a, const auto &b) {
-                                             return a->countCandidates() < b->countCandidates();
-                                         });
-
-        if ((*minValue)->countCandidates() == 1) {
-            auto value = *minValue;
-            auto cell = value->getCandidate();
-            cell->open(value);
-            pendingCells_.remove(cell);
-
-            // Remove related cells' candidates
-            for (auto &pendingCell: pendingCells_) {
-                if (cell->isRelated(pendingCell)) {
-                    pendingCell->removeCandidate(value);
-                }
-            }
-
-            // Remove value from pending values if complete
-            if (value->isComplete(size_)) {
-                pendingValues_.remove(value);
-            }
+        auto valIt = std::ranges::min_element(pendingValues, [](Value *a, Value *b) {
+            return a->countCandidates() < b->countCandidates();
+        });
+        Value *value = *valIt;
+        if (value->countCandidates() == 1) {
+            value->getCandidate()->open(value);
             return;
         }
 
-        if ((*minCell)->countCandidates() == 0 || (*minValue)->countCandidates() == 0) {
-            throw just::demo::exception::NoSolutionException();
+        if (cell->countCandidates() == 0 || value->countCandidates() == 0) {
+            throw NoSolutionException();
         }
 
-        throw CannotOpenWithoutGuessingException(*minCell, *minValue);
+        throw CannotOpenWithoutGuessingException(cell, value);
     }
 
-    std::vector<std::vector<int> > Solver::solveWithGuess(std::shared_ptr<Cell> cell, std::shared_ptr<Value> value) {
-        std::vector<std::shared_ptr<Cell> > guessCells;
-        std::vector<std::shared_ptr<Value> > guessValues;
-
+    std::vector<std::vector<int> > Solver::solveWithGuess(Cell *cell, Value *value) {
+        std::vector<Cell *> guessCells;
+        std::vector<Value *> guessValues;
         if (cell->countCandidates() <= value->countCandidates()) {
             guessCells = {cell};
             guessValues = cell->getCandidates();
@@ -277,35 +104,114 @@ namespace just::demo::solver {
         }
 
         std::vector<std::vector<std::vector<int> > > solutions;
-
-        for (const auto &guessCell: guessCells) {
-            for (const auto &guessValue: guessValues) {
+        for (auto *guessCell: guessCells) {
+            for (auto *guessValue: guessValues) {
                 auto nextGuess = copyState();
-                nextGuess[guessCell->getRow()][guessCell->getCol()] = guessValue->getValue();
-
+                nextGuess[guessCell->row][guessCell->col] = guessValue->val;
                 try {
-                    solutions.push_back(Solver(nextGuess).solve());
+                    Solver s(nextGuess);
+                    solutions.push_back(s.solve());
                     if (solutions.size() > 1) {
-                        throw just::demo::exception::MultipleSolutionsException();
+                        throw MultipleSolutionsException();
                     }
-                } catch (const just::demo::exception::NoSolutionException &) {
+                } catch (NoSolutionException &) {
                     // Our guess did not work, let's try another one
                 }
             }
         }
 
         if (solutions.empty()) {
-            throw just::demo::exception::NoSolutionException();
+            throw NoSolutionException();
         }
 
         return solutions.front();
     }
 
     std::vector<std::vector<int> > Solver::copyState() const {
-        std::vector<std::vector<int> > state(size_, std::vector<int>(size_));
-        for (const auto &cell: allCells_) {
-            state[cell->getRow()][cell->getCol()] = cell->getValue();
+        std::vector state(size, std::vector(size, 0));
+        for (auto &cell: allCells) {
+            state[cell->row][cell->col] = cell->getValue();
         }
         return state;
     }
-} // namespace just::demo::solver
+
+    void Solver::Cell::setCandidates(const std::vector<Value *> &values) {
+        candidates = values;
+    }
+
+    void Solver::Cell::open(Value *v) {
+        value = v;
+        for (auto *cv: candidates) {
+            cv->removeCandidate(this);
+        }
+
+        candidates.clear();
+        v->open(this);
+        std::erase(solver->pendingCells, this);
+        for (auto *pc: solver->pendingCells) {
+            if (isRelated(*pc)) {
+                pc->removeCandidate(v);
+            }
+        }
+    }
+
+    bool Solver::Cell::isRelated(const Cell &c) const {
+        return row == c.row || col == c.col || block == c.block;
+    }
+
+    void Solver::Cell::removeCandidate(Value *v) {
+        v->removeCandidate(this);
+        std::erase(candidates, v);
+    }
+
+    void Solver::Value::setCandidates(const std::vector<Cell *> &cells) {
+        auto groupBy = [](auto keyExtractor, const std::vector<Cell *> &cells) {
+            std::map<int, std::vector<Cell *> > groups;
+            for (auto *c: cells) groups[keyExtractor(c)].push_back(c);
+            std::vector<std::vector<Cell *> > res;
+            for (auto &[_, group]: groups) res.push_back(group);
+            return res;
+        };
+
+        auto rowGroups = groupBy([](Cell *c) { return c->row; }, cells);
+        auto colGroups = groupBy([](Cell *c) { return c->col; }, cells);
+        auto blockGroups = groupBy([](Cell *c) { return c->block; }, cells);
+
+        candidates.insert(candidates.end(), rowGroups.begin(), rowGroups.end());
+        candidates.insert(candidates.end(), colGroups.begin(), colGroups.end());
+        candidates.insert(candidates.end(), blockGroups.begin(), blockGroups.end());
+    }
+
+    void Solver::Value::removeCandidate(Cell *c) {
+        for (auto &group: candidates) {
+            std::erase(group, c);
+        }
+        std::erase_if(candidates, [](const auto &group) { return group.empty(); });
+    }
+
+    void Solver::Value::open(Cell *c) {
+        removeCandidate(c);
+        cells.push_back(c);
+        if (static_cast<int>(cells.size()) == solver->size) {
+            std::erase(solver->pendingValues, this);
+        }
+    }
+
+    int Solver::Value::countCandidates() const {
+        int minSize = INT_MAX;
+        for (auto &group: candidates) {
+            minSize = std::min(minSize, static_cast<int>(group.size()));
+        }
+        return minSize == INT_MAX ? 0 : minSize;
+    }
+
+    Solver::Cell *Solver::Value::getCandidate() const {
+        return getCandidates().front();
+    }
+
+    std::vector<Solver::Cell *> Solver::Value::getCandidates() const {
+        auto it = std::ranges::min_element(candidates,
+                                           [](const auto &a, const auto &b) { return a.size() < b.size(); });
+        return it == candidates.end() ? std::vector<Cell *>{} : *it;
+    }
+}

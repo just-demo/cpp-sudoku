@@ -9,12 +9,9 @@ include_directories(src)
 
 # Source files
 set(SOURCES
-        src/util/SudokuUtils.cpp
-        src/util/FileUtils.cpp
         src/solver/Solver.cpp
         src/generator/Reducer.cpp
         src/generator/Generator.cpp
-        src/main/DataDirs.cpp
 )
 
 # Create library
