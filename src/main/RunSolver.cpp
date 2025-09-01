@@ -2,6 +2,7 @@
 #include <chrono>
 #include <map>
 #include <algorithm>
+#include <ranges>
 #include <sstream>
 #include "../solver/Solver.hpp"
 #include "../util/SudokuUtils.hpp"
@@ -32,7 +33,7 @@ long countLines(const std::filesystem::path &file) {
 
 void solveAllReadySudoku() {
     auto files = FileUtils::streamFiles(DataDirs::READY_DIR);
-    std::sort(files.begin(), files.end());
+    std::ranges::sort(files);
 
     std::map<std::string, long> counts;
     for (const auto &file: files) {
@@ -40,7 +41,7 @@ void solveAllReadySudoku() {
     }
 
     long totalCount = 0;
-    for (const auto &[_, count]: counts) {
+    for (const auto &count: counts | std::views::values) {
         totalCount += count;
     }
 
@@ -55,7 +56,7 @@ void solveAllReadySudoku() {
 
         std::istringstream iss(content);
         std::string line;
-        long fileCount = 0;
+        long solvedCount = 0;
 
         while (std::getline(iss, line)) {
             if (!line.empty()) {
@@ -65,20 +66,22 @@ void solveAllReadySudoku() {
                     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start);
                     std::cout << "progress: " << counter << " / " << elapsed.count() << "s" << std::endl;
                 }
+
                 if (counter > 10000) {
                     throw std::runtime_error("stopped");
                 }
 
                 auto sudoku = SudokuUtils::fromString1D(line);
                 Solver(sudoku).solve();
-                ++fileCount;
+                ++solvedCount;
             }
         }
 
         auto fileEnd = std::chrono::steady_clock::now();
         auto fileDuration = std::chrono::duration_cast<std::chrono::milliseconds>(fileEnd - fileStart);
-        std::cout << file.filename().string() << ": " << fileDuration.count() << "ms / "
-                << (static_cast<double>(fileDuration.count()) / fileCount) << "ms per puzzle" << std::endl;
+
+        // std::cout << file.filename().string() << ": " << fileDuration.count() << "ms / "
+        //         << (static_cast<double>(fileDuration.count()) / solvedCount) << "ms per puzzle" << std::endl;
     }
 
     auto end = std::chrono::steady_clock::now();
@@ -91,3 +94,17 @@ int main() {
     // solveAllReadySudoku();
     return 0;
 }
+
+/*
+Total count: 1006697
+progress: 1000 / 30s
+progress: 2000 / 63s
+progress: 3000 / 94s
+progress: 4000 / 126s
+progress: 5000 / 156s
+progress: 6000 / 183s
+progress: 7000 / 212s
+progress: 8000 / 242s
+progress: 9000 / 269s
+progress: 10000 / 295s
+ */
